@@ -657,25 +657,32 @@ async function refRap(){
   const fFil=document.getElementById('fFil');
   const fid=fFil?fFil.value:'';
 
-  // Sorgu — sadece temel kolonlar, 500 hatasını önler
-  let q=sb.from('yedek_log').select('id,firma_id,firma_adi,baslik,durum,tip,tarih,saat,created_at,kaynak,mail_konusu,mail_govdesi').order('created_at',{ascending:false});
-  if(bas)q=q.gte('created_at',bas);
-  if(fid)q=q.eq('firma_id',fid);
+  // Ozet ve tablo yukleniyor goster
+  const oz=document.getElementById('ozet');
+  const rb=document.getElementById('rBody');
+  if(oz)oz.innerHTML='<div class="loading" style="grid-column:1/-1;">Yükleniyor...</div>';
+  if(rb)rb.innerHTML='<tr><td colspan="6" style="text-align:center;color:#bbb;padding:20px;">Yükleniyor...</td></tr>';
 
-  const{data,error}=await q;
-  if(error){
-    // mail_konusu yoksa daha az kolon ile tekrar dene
-    let q2=sb.from('yedek_log').select('id,firma_id,firma_adi,baslik,durum,tip,tarih,saat,created_at').order('created_at',{ascending:false});
-    if(bas)q2=q2.gte('created_at',bas);
-    if(fid)q2=q2.eq('firma_id',fid);
-    const{data:d2}=await q2;
-    renderRap(d2||[]);
-    return;
-  }
+  try{
+    let q=sb.from('yedek_log').select('id,firma_id,firma_adi,baslik,durum,tip,tarih,saat,created_at,kaynak,mail_konusu,mail_govdesi').order('created_at',{ascending:false});
+    if(bas)q=q.gte('created_at',bas);
+    if(fid)q=q.eq('firma_id',fid);
+    const{data,error}=await q;
+    if(error){
+      // mail_konusu yoksa daha az kolon ile tekrar dene
+      let q2=sb.from('yedek_log').select('id,firma_id,firma_adi,baslik,durum,tip,tarih,saat,created_at').order('created_at',{ascending:false});
+      if(bas)q2=q2.gte('created_at',bas);
+      if(fid)q2=q2.eq('firma_id',fid);
+      const{data:d2,error:e2}=await q2;
+      if(e2){console.error('refRap error:',e2);renderRap([]);return;}
+      renderRap(d2||[]);
+      return;
+    }
 
   // Mail gövdelerini cache'le
   (data||[]).forEach(l=>{if(l.mail_govdesi)lCache[l.id]={konu:l.mail_konusu,govde:l.mail_govdesi};});
   renderRap(data||[]);
+  }catch(ex){console.error('refRap hata:',ex);renderRap([]);}
 }
 
 function renderRap(list){
