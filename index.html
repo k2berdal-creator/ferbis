@@ -443,14 +443,18 @@ async function rSV(){
   if(!canV('server')){document.getElementById('con').innerHTML='<div class="noacc">Görüntüleme yetkiniz yok.</div>';return;}
   const{data}=await sb.from('server').select('*').eq('firma_id',cFirma.id).maybeSingle();
   const sv=data||{},d=!canE('server');
-  // Bağlan butonları
+  // Firewall WAN IP'sini otomatik al
+  const{data:fw}=await sb.from('firewall').select('wan1,wan2,ip').eq('firma_id',cFirma.id).maybeSingle();
+  const wanIP = (fw?.wan1||fw?.wan2||'').trim();
   const ic1 = sv.ic_ip1||'';
   const rdpIcPort = sv.rdp_ic||'3389';
   const rdpDisPort = sv.rdp_dis||'';
+  // WAN bağlantı adresi: firewall WAN IP + server RDP dış port
+  const wanHedef = wanIP && rdpDisPort ? wanIP+':'+rdpDisPort : '';
   const svBtnRow = `<div style="margin:0 0 12px 0;display:flex;gap:8px;flex-wrap:wrap;padding:10px;background:#f0f4ff;border-radius:6px;border:1px solid #c5d5f5;">
     <span style="font-size:12px;font-weight:600;color:#333;align-self:center;">Hızlı Bağlantı:</span>
     ${ic1?`<button onclick="rdpBaglanDirect('${ic1}:${rdpIcPort}')" style="background:#1565c0;color:#fff;border:none;padding:7px 14px;border-radius:4px;cursor:pointer;font-size:12px;font-weight:600;">🖥 RDP Local (${ic1}:${rdpIcPort})</button>`:''}
-    ${rdpDisPort?`<button onclick="rdpBaglanDirect(prompt('WAN IP?')+':${rdpDisPort}')" style="background:#2e7d32;color:#fff;border:none;padding:7px 14px;border-radius:4px;cursor:pointer;font-size:12px;font-weight:600;">🌐 RDP WAN (Port:${rdpDisPort})</button>`:''}
+    ${wanHedef?`<button onclick="rdpBaglanDirect('${wanHedef}')" style="background:#2e7d32;color:#fff;border:none;padding:7px 14px;border-radius:4px;cursor:pointer;font-size:12px;font-weight:600;">🌐 RDP WAN (${wanHedef})</button>`:rdpDisPort?`<button onclick="rdpBaglanDirect(prompt('WAN IP adresi:')+':${rdpDisPort}')" style="background:#e65100;color:#fff;border:none;padding:7px 14px;border-radius:4px;cursor:pointer;font-size:12px;font-weight:600;">🌐 RDP WAN (Port:${rdpDisPort}) — WAN IP gir</button>`:''}
     ${ic1?`<button onclick="webBaglan('http://${ic1}')" style="background:#880e4f;color:#fff;border:none;padding:7px 14px;border-radius:4px;cursor:pointer;font-size:12px;font-weight:600;">🔗 Web Arayüzü</button>`:''}
   </div>`;
   document.getElementById('con').innerHTML=`<div class="sh">Server Bilgileri</div><div class="sb">${svBtnRow}<div class="fg">
